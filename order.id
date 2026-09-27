@@ -1,0 +1,91 @@
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+export function VendorDashboard() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setOrders(data || []);
+    } catch (err) {
+      console.error("Erreur de chargement des commandes :", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const updateStatus = async (orderId, newStatus) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      fetchOrders(); // Rafraîchir la liste
+    } catch (err) {
+      alert("Impossible de mettre à jour le statut : " + err.message);
+    }
+  };
+
+  if (loading) return <div className="p-4 text-center">Chargement des commandes...</div>;
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      <h2 className="text-xl font-bold mb-4 text-gray-800">📊 Gestion des Commandes Easy Shop</h2>
+      
+      <div className="space-y-3">
+        {orders.map((order) => (
+          <div key={order.id} className="border rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between gap-3">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                  {order.status.toUpperCase()}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">{order.delivery_address}</p>
+              <p className="text-sm text-emerald-600 font-bold mt-1">
+                Total à encaisser : {(order.total_products + order.delivery_fee).toLocaleString()} FCFA
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-2 border-t text-xs">
+              <button 
+                onClick={() => updateStatus(order.id, 'acceptee')}
+                className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-semibold border border-blue-200"
+              >
+                Accepter
+              </button>
+              <button 
+                onClick={() => updateStatus(order.id, 'prete')}
+                className="bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg font-semibold border border-amber-200"
+              >
+                Prête pour livreur
+              </button>
+              <button 
+                onClick={() => updateStatus(order.id, 'livree')}
+                className="bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-lg font-semibold border border-emerald-200"
+              >
+                Marquer comme Livrée
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
