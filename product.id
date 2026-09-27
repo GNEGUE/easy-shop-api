@@ -1,0 +1,56 @@
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+export function ProductList({ onAddToCart }) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*, shops(name)')
+          .eq('is_available', true);
+
+        if (error) throw error;
+        setProducts(data || []);
+      } catch (err) {
+        console.error("Erreur de chargement des produits :", err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProducts();
+  }, []);
+
+  if (loading) {
+    return <div className="text-center p-8 text-gray-500">Chargement des boutiques Easy Shop...</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4">
+      {products.map((product) => (
+        <div key={product.id} className="border border-gray-200 rounded-xl p-3 bg-white shadow-sm flex flex-col justify-between">
+          <div>
+            <img 
+              src={product.image_url || 'https://via.placeholder.com/150'} 
+              alt={product.name} 
+              className="h-36 w-full object-cover rounded-lg mb-2"
+            />
+            <h3 className="font-bold text-gray-800 text-sm line-clamp-1">{product.name}</h3>
+            <p className="text-xs text-gray-500 mb-1">Boutique : {product.shops?.name || 'Inconnue'}</p>
+            <p className="text-emerald-600 font-bold text-base">{product.price.toLocaleString()} FCFA</p>
+          </div>
+          <button
+            onClick={() => onAddToCart(product)}
+            className="mt-3 w-full bg-emerald-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition"
+          >
+            Ajouter au panier 🛒
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
